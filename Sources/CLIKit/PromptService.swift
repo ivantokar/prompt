@@ -1,46 +1,46 @@
 import Foundation
-import Rainbow
+@_exported import Rainbow
 
 // MARK: - Log Level
 
-enum LogLevel: Int, Comparable {
+public enum LogLevel: Int, Comparable {
     case quiet = 0
     case normal = 1
     case verbose = 2
 
-    static func < (lhs: LogLevel, rhs: LogLevel) -> Bool {
+    public static func < (lhs: LogLevel, rhs: LogLevel) -> Bool {
         lhs.rawValue < rhs.rawValue
     }
 }
 
 // MARK: - Symbols
 
-struct Symbols {
-    static let success = "[✓]"
-    static let error = "[✗]"
-    static let warning = "[!]"
-    static let info = "[i]"
-    static let arrow = "→"
-    static let bullet = "•"
+public struct Symbols {
+    public static let success = "[✓]"
+    public static let error = "[✗]"
+    public static let warning = "[!]"
+    public static let info = "[i]"
+    public static let arrow = "→"
+    public static let bullet = "•"
     // Multi-select uses different style to avoid confusion with status
-    static let checked = "◉"
-    static let unchecked = "○"
+    public static let checked = "◉"
+    public static let unchecked = "○"
 }
 
 // MARK: - Spinner
 
-class Spinner {
+public class Spinner {
     private let frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
     private var frameIndex = 0
     private var isRunning = false
     private var message: String
     private var timer: DispatchSourceTimer?
 
-    init(message: String) {
+    public init(message: String) {
         self.message = message
     }
 
-    func start() {
+    public func start() {
         guard !isRunning else { return }
         isRunning = true
         frameIndex = 0
@@ -56,7 +56,7 @@ class Spinner {
         timer?.resume()
     }
 
-    func stop(success: Bool = true, message: String? = nil) {
+    public func stop(success: Bool = true, message: String? = nil) {
         guard isRunning else { return }
         isRunning = false
         timer?.cancel()
@@ -83,14 +83,14 @@ class Spinner {
         frameIndex += 1
     }
 
-    func update(_ newMessage: String) {
+    public func update(_ newMessage: String) {
         self.message = newMessage
     }
 }
 
 // MARK: - Box Style
 
-enum BoxStyle {
+public enum BoxStyle {
     case single
     case double
     case rounded
@@ -109,7 +109,7 @@ enum BoxStyle {
 
 // MARK: - Table
 
-struct Table {
+public struct Table {
     var headers: [String]
     var rows: [[String]]
     var style: BoxStyle
@@ -120,7 +120,7 @@ struct Table {
         self.style = style
     }
 
-    func render() -> String {
+    public func render() -> String {
         let c = style.chars
         var allRows = rows
         if !headers.isEmpty {
@@ -176,8 +176,8 @@ struct Table {
 
 // MARK: - Error Formatter
 
-struct ErrorFormatter {
-    static let suggestions: [String: String] = [
+public struct ErrorFormatter {
+    public static let suggestions: [String: String] = [
         "permission denied": "Try running with sudo or check file permissions",
         "no such file": "Verify the path exists and is spelled correctly",
         "already exists": "Use --force to overwrite or choose a different name",
@@ -185,7 +185,7 @@ struct ErrorFormatter {
         "timeout": "Check your network connection"
     ]
 
-    static func format(_ error: Error, context: String? = nil) -> String {
+    public static func format(_ error: Error, context: String? = nil) -> String {
         var result = "\(Symbols.error.red) \(error.localizedDescription)"
 
         if let context = context {
@@ -207,8 +207,8 @@ struct ErrorFormatter {
 
 // MARK: - Path Formatter
 
-struct PathFormatter {
-    static func format(_ path: String) -> String {
+public struct PathFormatter {
+    public static func format(_ path: String) -> String {
         let components = path.split(separator: "/")
         guard !components.isEmpty else { return path }
 
@@ -231,22 +231,22 @@ struct PathFormatter {
         return name.cyan
     }
 
-    static func directory(_ path: String) -> String {
+    public static func directory(_ path: String) -> String {
         path.blue
     }
 
-    static func file(_ path: String) -> String {
+    public static func file(_ path: String) -> String {
         path.cyan
     }
 }
 
 // MARK: - Prompt Service
 
-struct PromptService {
+public struct PromptService {
     private let useColors: Bool
-    var logLevel: LogLevel
+    public var logLevel: LogLevel
 
-    init(useColors: Bool = isatty(fileno(stdout)) != 0, logLevel: LogLevel = .normal) {
+    public init(useColors: Bool = isatty(fileno(stdout)) != 0, logLevel: LogLevel = .normal) {
         self.useColors = useColors
         self.logLevel = logLevel
         Rainbow.enabled = useColors
@@ -254,7 +254,7 @@ struct PromptService {
 
     // MARK: - Banner
 
-    func banner() {
+    public func banner() {
         guard logLevel >= .normal else { return }
         let o = "#E07850"  // Orange
         print("""
@@ -267,11 +267,11 @@ struct PromptService {
 
     // MARK: - Spinner
 
-    func spinner(_ message: String) -> Spinner {
+    public func spinner(_ message: String) -> Spinner {
         Spinner(message: message)
     }
 
-    func withSpinner<T>(_ message: String, task: () throws -> T) rethrows -> T {
+    public func withSpinner<T>(_ message: String, task: () throws -> T) rethrows -> T {
         let s = Spinner(message: message)
         s.start()
         do {
@@ -286,7 +286,7 @@ struct PromptService {
 
     // MARK: - Input Prompts
 
-    func prompt(_ message: String, default defaultValue: String? = nil) -> String {
+    public func prompt(_ message: String, default defaultValue: String? = nil) -> String {
         if let defaultValue = defaultValue {
             print("\(message) [\(defaultValue.dim)]: ", terminator: "")
         } else {
@@ -300,7 +300,7 @@ struct PromptService {
         return input
     }
 
-    func confirm(_ message: String, default defaultValue: Bool = true) -> Bool {
+    public func confirm(_ message: String, default defaultValue: Bool = true) -> Bool {
         let hint = defaultValue ? "Y/n" : "y/N"
         print("\(message) [\(hint.dim)]: ", terminator: "")
 
@@ -311,7 +311,7 @@ struct PromptService {
         return input == "y" || input == "yes"
     }
 
-    func select(_ message: String, options: [String], default defaultIndex: Int = 0) -> Int {
+    public func select(_ message: String, options: [String], default defaultIndex: Int = 0) -> Int {
         print(message)
         for (index, option) in options.enumerated() {
             let marker = index == defaultIndex ? Symbols.arrow : " "
@@ -330,7 +330,7 @@ struct PromptService {
     }
 
     /// Interactive multi-select with arrow keys
-    func multiSelect(_ message: String, options: [String], defaults: [Bool]? = nil) -> [Int] {
+    public func multiSelect(_ message: String, options: [String], defaults: [Bool]? = nil) -> [Int] {
         var selected = defaults ?? [Bool](repeating: false, count: options.count)
         if selected.count < options.count {
             selected += [Bool](repeating: false, count: options.count - selected.count)
@@ -411,57 +411,57 @@ struct PromptService {
 
     // MARK: - Status Messages
 
-    func info(_ message: String) {
+    public func info(_ message: String) {
         guard logLevel >= .normal else { return }
         print("\(Symbols.info.blue) \(message)")
     }
 
-    func success(_ message: String) {
+    public func success(_ message: String) {
         guard logLevel >= .normal else { return }
         print("\(Symbols.success.green) \(message)")
     }
 
-    func warning(_ message: String) {
+    public func warning(_ message: String) {
         guard logLevel >= .normal else { return }
         print("\(Symbols.warning.yellow) \(message)")
     }
 
-    func error(_ message: String) {
+    public func error(_ message: String) {
         // Errors always show
         print("\(Symbols.error.red) \(message)")
     }
 
-    func verbose(_ message: String) {
+    public func verbose(_ message: String) {
         guard logLevel >= .verbose else { return }
         print("  \(message.dim)")
     }
 
     // MARK: - Hierarchical Output
 
-    func item(_ message: String, indent: Int = 0) {
+    public func item(_ message: String, indent: Int = 0) {
         guard logLevel >= .normal else { return }
         let padding = String(repeating: "  ", count: indent)
         print("\(padding)\(Symbols.bullet) \(message)")
     }
 
-    func itemSuccess(_ message: String, indent: Int = 1) {
+    public func itemSuccess(_ message: String, indent: Int = 1) {
         guard logLevel >= .normal else { return }
         let padding = String(repeating: "  ", count: indent)
         print("\(padding)\(Symbols.success.green) \(message)")
     }
 
-    func itemError(_ message: String, indent: Int = 1) {
+    public func itemError(_ message: String, indent: Int = 1) {
         let padding = String(repeating: "  ", count: indent)
         print("\(padding)\(Symbols.error.red) \(message)")
     }
 
-    func itemWarning(_ message: String, indent: Int = 1) {
+    public func itemWarning(_ message: String, indent: Int = 1) {
         guard logLevel >= .normal else { return }
         let padding = String(repeating: "  ", count: indent)
         print("\(padding)\(Symbols.warning.yellow) \(message)")
     }
 
-    func itemSkipped(_ message: String, reason: String? = nil, indent: Int = 1) {
+    public func itemSkipped(_ message: String, reason: String? = nil, indent: Int = 1) {
         guard logLevel >= .normal else { return }
         let padding = String(repeating: "  ", count: indent)
         if let reason = reason {
@@ -473,20 +473,20 @@ struct PromptService {
 
     // MARK: - Sections & Headers
 
-    func step(_ number: Int, _ message: String) {
+    public func step(_ number: Int, _ message: String) {
         guard logLevel >= .normal else { return }
         print("")
         print("[\(number)] ".cyan.bold + message)
     }
 
-    func header(_ title: String) {
+    public func header(_ title: String) {
         guard logLevel >= .normal else { return }
         print("")
         print("  \(title.bold)")
         print("")
     }
 
-    func section(_ title: String) {
+    public func section(_ title: String) {
         guard logLevel >= .normal else { return }
         print("")
         print("  \(title)")
@@ -494,7 +494,7 @@ struct PromptService {
 
     // MARK: - Box & Panel
 
-    func box(_ content: String, style: BoxStyle = .rounded, title: String? = nil) {
+    public func box(_ content: String, style: BoxStyle = .rounded, title: String? = nil) {
         guard logLevel >= .normal else { return }
         let c = style.chars
         let lines = content.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
@@ -521,7 +521,7 @@ struct PromptService {
         print(c.bl + String(repeating: c.h, count: maxWidth + 2) + c.br)
     }
 
-    func panel(_ title: String, items: [(String, String)]) {
+    public func panel(_ title: String, items: [(String, String)]) {
         guard logLevel >= .normal else { return }
         var table = Table(style: .rounded)
         table.rows = items.map { [$0.0.bold, $0.1] }
@@ -532,14 +532,14 @@ struct PromptService {
         print(table.render())
     }
 
-    func divider(_ char: String = "─", length: Int = 40) {
+    public func divider(_ char: String = "─", length: Int = 40) {
         guard logLevel >= .normal else { return }
         print(String(repeating: char, count: length).dim)
     }
 
     // MARK: - Table
 
-    func table(headers: [String], rows: [[String]], style: BoxStyle = .single) {
+    public func table(headers: [String], rows: [[String]], style: BoxStyle = .single) {
         guard logLevel >= .normal else { return }
         let t = Table(headers: headers, rows: rows, style: style)
         print(t.render())
@@ -547,12 +547,12 @@ struct PromptService {
 
     // MARK: - Summary & Next Steps
 
-    func summary(_ message: String) {
+    public func summary(_ message: String) {
         print("")
         print("\(Symbols.success.green) \(message)")
     }
 
-    func nextSteps(_ steps: [String]) {
+    public func nextSteps(_ steps: [String]) {
         guard logLevel >= .normal else { return }
         print("")
         print("Next steps:".bold)
@@ -563,12 +563,12 @@ struct PromptService {
 
     // MARK: - Progress
 
-    func startOperation(_ message: String) {
+    public func startOperation(_ message: String) {
         guard logLevel >= .normal else { return }
         print("\(message)...")
     }
 
-    func completeOperation(_ message: String, duration: TimeInterval? = nil) {
+    public func completeOperation(_ message: String, duration: TimeInterval? = nil) {
         guard logLevel >= .normal else { return }
         print("")
         if let duration = duration {
@@ -580,26 +580,26 @@ struct PromptService {
 
     // MARK: - Paths
 
-    func path(_ path: String) -> String {
+    public func path(_ path: String) -> String {
         PathFormatter.format(path)
     }
 
     // MARK: - Errors
 
-    func formatError(_ error: Error, context: String? = nil) -> String {
+    public func formatError(_ error: Error, context: String? = nil) -> String {
         ErrorFormatter.format(error, context: context)
     }
 
     // MARK: - Blank Lines
 
-    func newline() {
+    public func newline() {
         guard logLevel >= .normal else { return }
         print("")
     }
 
     // MARK: - Raw Output
 
-    func output(_ text: String) {
+    public func output(_ text: String) {
         print(text)
     }
 
