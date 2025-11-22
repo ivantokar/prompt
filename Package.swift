@@ -2,14 +2,14 @@
 import PackageDescription
 
 let package = Package(
-    name: "CLIKit",
+    name: "Prompt",
     platforms: [
         .macOS(.v13)
     ],
     products: [
         .library(
-            name: "CLIKit",
-            targets: ["CLIKit"]
+            name: "Prompt",
+            targets: ["Prompt"]
         )
     ],
     dependencies: [
@@ -17,16 +17,16 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "CLIKit",
+            name: "Prompt",
             dependencies: [
                 .product(name: "Rainbow", package: "Rainbow")
             ],
-            path: "Sources/CLIKit"
+            path: "Sources/Prompt"
         ),
         .testTarget(
-            name: "CLIKitTests",
-            dependencies: ["CLIKit"],
-            path: "Tests/CLIKitTests"
+            name: "PromptTests",
+            dependencies: ["Prompt"],
+            path: "Tests/PromptTests"
         )
     ]
 )

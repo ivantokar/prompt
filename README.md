@@ -1,4 +1,4 @@
-# CLIKit
+# Prompt
 
 A comprehensive Swift library for building beautiful and interactive command-line interfaces.
 
@@ -16,11 +16,11 @@ A comprehensive Swift library for building beautiful and interactive command-lin
 
 ### Swift Package Manager
 
-Add CLIKit to your `Package.swift`:
+Add Prompt to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/yourusername/CLIKit.git", from: "1.0.0")
+    .package(url: "https://github.com/yourusername/Prompt.git", from: "1.0.0")
 ]
 ```
 
@@ -30,7 +30,7 @@ Then add it to your target:
 .target(
     name: "YourTarget",
     dependencies: [
-        .product(name: "CLIKit", package: "CLIKit")
+        .product(name: "Prompt", package: "Prompt")
     ]
 )
 ```
@@ -38,7 +38,7 @@ Then add it to your target:
 ## Usage
 
 ```swift
-import CLIKit
+import Prompt
 
 let prompt = PromptService()
 
