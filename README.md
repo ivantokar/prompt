@@ -61,6 +61,13 @@ let selected = prompt.multiSelect(
     options: ["iOS", "macOS", "tvOS", "watchOS"]
 )
 
+// Multi-select with validation (require at least 1 selection)
+let platforms = prompt.multiSelect(
+    "Choose platforms:",
+    options: ["iOS", "macOS", "tvOS", "watchOS"],
+    minSelections: 1
+)
+
 // Spinner for long operations
 let spinner = prompt.spinner("Loading...")
 spinner.start()
