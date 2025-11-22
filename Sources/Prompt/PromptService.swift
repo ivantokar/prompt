@@ -330,13 +330,14 @@ public struct PromptService {
     }
 
     /// Interactive multi-select with arrow keys
-    public func multiSelect(_ message: String, options: [String], defaults: [Bool]? = nil) -> [Int] {
+    public func multiSelect(_ message: String, options: [String], defaults: [Bool]? = nil, minSelections: Int = 0) -> [Int] {
         var selected = defaults ?? [Bool](repeating: false, count: options.count)
         if selected.count < options.count {
             selected += [Bool](repeating: false, count: options.count - selected.count)
         }
         var cursor = 0
         var firstRender = true
+        var errorMessage: String? = nil
 
         // Enable raw mode for arrow key input
         var originalTermios = termios()
@@ -353,7 +354,7 @@ public struct PromptService {
             // On first render, just print. On subsequent renders, move up first.
             if !firstRender {
                 // Move cursor up to overwrite previous output
-                let linesToMove = options.count + 2
+                let linesToMove = options.count + 3 + (errorMessage != nil ? 1 : 0)
                 print("\u{001B}[\(linesToMove)A\r", terminator: "")
             }
             firstRender = false
@@ -367,6 +368,14 @@ public struct PromptService {
                 let text = index == cursor ? option.bold : option
                 print("\u{001B}[K  \(pointer) \(checkbox) \(text)")
             }
+
+            // Show error message if validation failed
+            if let error = errorMessage {
+                print("\u{001B}[K  \(Symbols.error.red) \(error)")
+            } else {
+                print("\u{001B}[K")
+            }
+
             fflush(stdout)
         }
 
@@ -392,8 +401,19 @@ public struct PromptService {
                 }
             } else if c == 32 { // Space
                 selected[cursor].toggle()
+                errorMessage = nil // Clear error when user makes a change
             } else if c == 10 || c == 13 { // Enter
-                break
+                // Validate selection
+                let selectedCount = selected.filter { $0 }.count
+                if selectedCount < minSelections {
+                    if minSelections == 1 {
+                        errorMessage = "Please select at least one option"
+                    } else {
+                        errorMessage = "Please select at least \(minSelections) options"
+                    }
+                } else {
+                    break
+                }
             } else if c == 113 { // q
                 break
             }
