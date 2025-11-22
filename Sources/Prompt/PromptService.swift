@@ -338,6 +338,7 @@ public struct PromptService {
         var cursor = 0
         var firstRender = true
         var errorMessage: String? = nil
+        var previousLinesCount = 0
 
         // Enable raw mode for arrow key input
         var originalTermios = termios()
@@ -354,8 +355,7 @@ public struct PromptService {
             // On first render, just print. On subsequent renders, move up first.
             if !firstRender {
                 // Move cursor up to overwrite previous output
-                let linesToMove = options.count + 3 + (errorMessage != nil ? 1 : 0)
-                print("\u{001B}[\(linesToMove)A\r", terminator: "")
+                print("\u{001B}[\(previousLinesCount)A\r", terminator: "")
             }
             firstRender = false
 
@@ -375,6 +375,10 @@ public struct PromptService {
             } else {
                 print("\u{001B}[K")
             }
+
+            // Track how many lines we printed for next render
+            // 2 header lines + options + 1 footer line (error or blank)
+            previousLinesCount = 2 + options.count + 1
 
             fflush(stdout)
         }
