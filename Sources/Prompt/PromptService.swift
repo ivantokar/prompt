@@ -433,6 +433,100 @@ public struct PromptService {
         return selected.enumerated().compactMap { $0.element ? $0.offset : nil }
     }
 
+    /// Interactive radio-select with arrow keys (single selection only)
+    /// Returns the index of selected option, or nil if "None" was selected
+    public func radioSelect(_ message: String, options: [String], includeNone: Bool = true) -> Int? {
+        var allOptions = options
+        if includeNone {
+            allOptions.insert("None", at: 0)
+        }
+
+        var selectedIndex = includeNone ? 0 : 0  // Start at first option
+        var cursor = selectedIndex
+        var firstRender = true
+        var previousLinesCount = 0
+
+        // Enable raw mode for arrow key input
+        var originalTermios = termios()
+        tcgetattr(STDIN_FILENO, &originalTermios)
+        var raw = originalTermios
+        raw.c_lflag &= ~UInt(ICANON | ECHO)
+        tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw)
+
+        // Hide cursor
+        print("\u{001B}[?25l", terminator: "")
+        fflush(stdout)
+
+        func render() {
+            // On first render, just print. On subsequent renders, move up first.
+            if !firstRender {
+                print("\u{001B}[\(previousLinesCount)A\r", terminator: "")
+            }
+            firstRender = false
+
+            print("\u{001B}[K\(message)")
+            print("\u{001B}[K  \("(↑/↓ navigate, enter confirm)".dim)")
+
+            for (index, option) in allOptions.enumerated() {
+                let radio = index == selectedIndex ? Symbols.checked.green : Symbols.unchecked
+                let pointer = index == cursor ? Symbols.arrow.cyan : " "
+                let text = index == cursor ? option.bold : option
+                print("\u{001B}[K  \(pointer) \(radio) \(text)")
+            }
+
+            // Track how many lines we printed for next render
+            previousLinesCount = 2 + allOptions.count
+
+            fflush(stdout)
+        }
+
+        render()
+
+        while true {
+            var c: UInt8 = 0
+            read(STDIN_FILENO, &c, 1)
+
+            if c == 27 { // Escape sequence
+                var seq: [UInt8] = [0, 0]
+                read(STDIN_FILENO, &seq[0], 1)
+                read(STDIN_FILENO, &seq[1], 1)
+
+                if seq[0] == 91 { // [
+                    switch seq[1] {
+                    case 65: // Up
+                        cursor = cursor > 0 ? cursor - 1 : allOptions.count - 1
+                        selectedIndex = cursor
+                    case 66: // Down
+                        cursor = cursor < allOptions.count - 1 ? cursor + 1 : 0
+                        selectedIndex = cursor
+                    default: break
+                    }
+                }
+            } else if c == 32 { // Space - select current option
+                selectedIndex = cursor
+            } else if c == 10 || c == 13 { // Enter
+                break
+            } else if c == 113 { // q
+                break
+            }
+
+            render()
+        }
+
+        // Restore terminal
+        tcsetattr(STDIN_FILENO, TCSAFLUSH, &originalTermios)
+        print("\u{001B}[?25h", terminator: "") // Show cursor
+        print("") // New line
+
+        // If "None" was selected and includeNone is true, return nil
+        if includeNone && selectedIndex == 0 {
+            return nil
+        }
+
+        // Adjust index if we added "None" option
+        return includeNone ? selectedIndex - 1 : selectedIndex
+    }
+
     // MARK: - Status Messages
 
     public func info(_ message: String) {
