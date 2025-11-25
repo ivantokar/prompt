@@ -1,32 +1,6 @@
 import Foundation
 @_exported import Rainbow
 
-// MARK: - Log Level
-
-public enum LogLevel: Int, Comparable {
-    case quiet = 0
-    case normal = 1
-    case verbose = 2
-
-    public static func < (lhs: LogLevel, rhs: LogLevel) -> Bool {
-        lhs.rawValue < rhs.rawValue
-    }
-}
-
-// MARK: - Symbols
-
-public struct Symbols {
-    public static let success = "[✓]"
-    public static let error = "[✗]"
-    public static let warning = "[!]"
-    public static let info = "[i]"
-    public static let arrow = "→"
-    public static let bullet = "•"
-    // Multi-select uses different style to avoid confusion with status
-    public static let checked = "◉"
-    public static let unchecked = "○"
-}
-
 // MARK: - Spinner
 
 public class Spinner {
@@ -252,19 +226,6 @@ public struct PromptService {
         Rainbow.enabled = useColors
     }
 
-    // MARK: - Banner
-
-    public func banner() {
-        guard logLevel >= .normal else { return }
-        let o = "#E07850"  // Orange
-        print("""
-
-        \(" _|_  ".white)\("_  _  ".hex(o))\("_".white)
-        \("  |_ ".white)\("(_ (_ ".hex(o))\("(_".white)   \("v2.2.0".dim)
-
-        """)
-    }
-
     // MARK: - Spinner
 
     public func spinner(_ message: String) -> Spinner {
@@ -311,6 +272,22 @@ public struct PromptService {
         return input == "y" || input == "yes"
     }
 
+    /// Multi-line text editor with file insertion support
+    /// - Parameters:
+    ///   - message: Prompt message
+    ///   - placeholder: Optional placeholder text
+    /// - Returns: Multi-line text
+    public func multiline(_ message: String, placeholder: String? = nil) -> String {
+        let editor = MultiLineEditor()
+        return editor.edit(message: message, placeholder: placeholder)
+    }
+
+    /// Deprecated: Use multiline() instead
+    @available(*, deprecated, renamed: "multiline")
+    public func promptAdvanced(_ message: String, placeholder: String? = nil) -> String {
+        return multiline(message, placeholder: placeholder)
+    }
+
     public func select(_ message: String, options: [String], default defaultIndex: Int = 0) -> Int {
         print(message)
         for (index, option) in options.enumerated() {
@@ -330,11 +307,14 @@ public struct PromptService {
     }
 
     /// Interactive multi-select with arrow keys
-    public func multiSelect(_ message: String, options: [String], defaults: [Bool]? = nil, minSelections: Int = 0) -> [Int] {
+    public func multiSelect(_ message: String, options: [String], defaults: [Bool]? = nil, minSelections: Int = 0, disabled: [Bool]? = nil) -> [Int] {
         var selected = defaults ?? [Bool](repeating: false, count: options.count)
         if selected.count < options.count {
             selected += [Bool](repeating: false, count: options.count - selected.count)
         }
+
+        let disabledItems = disabled ?? [Bool](repeating: false, count: options.count)
+
         var cursor = 0
         var firstRender = true
         var errorMessage: String? = nil
@@ -363,9 +343,21 @@ public struct PromptService {
             print("\u{001B}[K  \("(↑/↓ navigate, space toggle, enter confirm)".dim)")
 
             for (index, option) in options.enumerated() {
-                let checkbox = selected[index] ? Symbols.checked.green : Symbols.unchecked
+                let isDisabled = disabledItems[index]
+                let checkbox: String
+                let text: String
+
+                if isDisabled {
+                    // Disabled: filled circle, dimmed text
+                    checkbox = "●".dim
+                    text = option.dim
+                } else {
+                    // Enabled: normal checkbox, normal text
+                    checkbox = selected[index] ? Symbols.checked.green : Symbols.unchecked
+                    text = index == cursor ? option.bold : option
+                }
+
                 let pointer = index == cursor ? Symbols.arrow.cyan : " "
-                let text = index == cursor ? option.bold : option
                 print("\u{001B}[K  \(pointer) \(checkbox) \(text)")
             }
 
@@ -389,6 +381,8 @@ public struct PromptService {
             var c: UInt8 = 0
             read(STDIN_FILENO, &c, 1)
 
+            var shouldRender = false
+
             if c == 27 { // Escape sequence
                 var seq: [UInt8] = [0, 0]
                 read(STDIN_FILENO, &seq[0], 1)
@@ -398,14 +392,20 @@ public struct PromptService {
                     switch seq[1] {
                     case 65: // Up
                         cursor = cursor > 0 ? cursor - 1 : options.count - 1
+                        shouldRender = true
                     case 66: // Down
                         cursor = cursor < options.count - 1 ? cursor + 1 : 0
+                        shouldRender = true
                     default: break
                     }
                 }
             } else if c == 32 { // Space
-                selected[cursor].toggle()
-                errorMessage = nil // Clear error when user makes a change
+                // Only allow toggle if not disabled
+                if !disabledItems[cursor] {
+                    selected[cursor].toggle()
+                    errorMessage = nil // Clear error when user makes a change
+                    shouldRender = true
+                }
             } else if c == 10 || c == 13 { // Enter
                 // Validate selection
                 let selectedCount = selected.filter { $0 }.count
@@ -415,6 +415,7 @@ public struct PromptService {
                     } else {
                         errorMessage = "Please select at least \(minSelections) options"
                     }
+                    shouldRender = true
                 } else {
                     break
                 }
@@ -422,7 +423,9 @@ public struct PromptService {
                 break
             }
 
-            render()
+            if shouldRender {
+                render()
+            }
         }
 
         // Restore terminal
@@ -435,10 +438,11 @@ public struct PromptService {
 
     /// Interactive radio-select with arrow keys (single selection only)
     /// Returns the index of selected option, or nil if "None" was selected
-    public func radioSelect(_ message: String, options: [String], includeNone: Bool = true) -> Int? {
+    public func radioSelect(_ message: String, options: [String], includeNone: Bool = true, noneCaption: String? = nil) -> Int? {
         var allOptions = options
         if includeNone {
-            allOptions.insert("None", at: 0)
+            let noneOption = noneCaption != nil ? "none \(noneCaption!.dim)" : "None"
+            allOptions.insert(noneOption, at: 0)
         }
 
         var selectedIndex = includeNone ? 0 : 0  // Start at first option
@@ -486,6 +490,8 @@ public struct PromptService {
             var c: UInt8 = 0
             read(STDIN_FILENO, &c, 1)
 
+            var shouldRender = false
+
             if c == 27 { // Escape sequence
                 var seq: [UInt8] = [0, 0]
                 read(STDIN_FILENO, &seq[0], 1)
@@ -496,21 +502,26 @@ public struct PromptService {
                     case 65: // Up
                         cursor = cursor > 0 ? cursor - 1 : allOptions.count - 1
                         selectedIndex = cursor
+                        shouldRender = true
                     case 66: // Down
                         cursor = cursor < allOptions.count - 1 ? cursor + 1 : 0
                         selectedIndex = cursor
+                        shouldRender = true
                     default: break
                     }
                 }
             } else if c == 32 { // Space - select current option
                 selectedIndex = cursor
+                shouldRender = true
             } else if c == 10 || c == 13 { // Enter
                 break
             } else if c == 113 { // q
                 break
             }
 
-            render()
+            if shouldRender {
+                render()
+            }
         }
 
         // Restore terminal
@@ -526,6 +537,7 @@ public struct PromptService {
         // Adjust index if we added "None" option
         return includeNone ? selectedIndex - 1 : selectedIndex
     }
+
 
     // MARK: - Status Messages
 
