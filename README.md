@@ -1,5 +1,5 @@
-<p style=“text-align: center;”>
-  <img src=“./prompt-logo.png” width=“200"/>
+<p align="center">
+<img src="./prompt-logo.png" alt="A comprehensive Swift library for building beautiful and interactive command-line interfaces" width="200">
 </p>
 
 # Prompt
