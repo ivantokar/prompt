@@ -236,7 +236,3 @@ do {
 ## License
 
 MIT License - See LICENSE file for details
-
-## Author
-
-Created for use with tccc and other CLI tools.
